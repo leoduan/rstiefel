@@ -2,9 +2,19 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <Rmath.h>
+#include <stdbool.h>
 
 
 /***  ***/
+
+static void chkIntFn(void *dummy) {
+  R_CheckUserInterrupt();
+}
+
+// this will call the above in a top-level context so it won't longjmp-out of your context
+bool checkInterrupt() {
+  return (R_ToplevelExec(chkIntFn, NULL) == FALSE);
+}
 
 
 void rWc(double *kap, int *m, double *W)
@@ -20,6 +30,9 @@ void rWc(double *kap, int *m, double *W)
 
   while( done==0) 
   {
+    if (checkInterrupt()){
+      break;
+    }
     Z=rbeta( (*m-1.0)/2.0, (*m-1.0)/2.0 );
    *W=( 1-(1+b)*Z)/(1.0-(1.0-b)*Z) ;
     U=runif(0,1);
@@ -58,13 +71,16 @@ double rtheta_bmf(double k, double a, double b, double c)
     ct=c+log(.5*(1.0+exp(-2.0*c))) ;
     lrmx=lrmx+sqrt(pow(b,2)+pow(ct,2)) + log(2.0) ;
   }
-
   while(log(u)>lrth-lrmx)
   { 
     u=runif(0,1);
     th=rbeta(.5,g) ;
     lrth=a*th+(k-g)*log(1-th)+
          sqrt(1.0-th)*b+sqrt(th)*c+log(1.0+exp(-2.0*sqrt(th)*c))  ;
+
+    if (checkInterrupt()){
+      break;
+    }
    }
   return th; 
 }
@@ -132,6 +148,9 @@ double rtheta_bing(double k, double a)
     u=runif(0,1);
     th=rbeta(.5,g);
     lrth=a*th+(k-g)*log(1-th);
+     if (checkInterrupt()){
+      break;
+    }
   }
   return th;
 
